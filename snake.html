@@ -1,0 +1,151 @@
+<canvas id="gc" width="400" height="400"></canvas>
+<script>
+window.onload=function() {
+	canv=document.getElementById("gc");
+	ctx=canv.getContext("2d");
+	document.addEventListener("keydown",keyDown);
+	setInterval(game,1000/10);
+    ctx.fillStyle="black";
+    ctx.fillRect(0,0,canv.width,canv.height);
+}
+direction = 0.5;
+gameState = -1; // paused:0, running:1, dead:2
+px=py=10;
+tc=20;
+gs=400/tc;
+ax=ay=15;
+xv=yv=0;
+snakeBody=[];
+tail=5;
+
+function game() {
+    if(gameState==-1){
+        alert("Arrow Keys to move\nSpacebar to pause");
+        gameState = 1;
+    }
+    if(gameState==0){
+        ctx.fillStyle="grey";
+        ctx.fillRect(0,0,canv.width,canv.height);
+        
+        ctx.fillStyle="black";
+        for(var i=0;i<snakeBody.length;i++){
+            ctx.fillRect(snakeBody[i].x*gs,snakeBody[i].y*gs,gs-2,gs-2);
+        }
+        
+        ctx.fillStyle="white";
+        ctx.fillRect(ax*gs,ay*gs,gs-2,gs-2); 
+    }else if(gameState==1){
+       	px+=xv;
+        py+=yv;
+
+        ctx.fillStyle="black";
+        ctx.fillRect(0,0,canv.width,canv.height);
+
+        ctx.fillStyle="white";
+        for(var i=0;i<snakeBody.length;i++){
+            ctx.fillRect(snakeBody[i].x*gs,snakeBody[i].y*gs,gs-2,gs-2);
+            if(snakeBody[i].x==px && snakeBody[i].y==py && snakeBody.length > 5){
+                gameState=2;
+                game();
+            }
+        }
+        
+        if(px<0){
+            gameState=2;
+            game();
+        }
+        if(px>tc-1){
+            gameState=2;
+            game();
+        }
+        if(py<0){
+            gameState=2;
+            game();
+        }
+        if(py>tc-1){
+            gameState=2;
+            game();
+        }
+
+        snakeBody.push({x:px,y:py});
+        while(snakeBody.length>tail){
+            snakeBody.shift();
+        }	
+
+        if(ax==px && ay==py){
+            tail++;
+            do{
+                contains=false;
+                ax_=Math.floor(Math.random()*tc);
+                ay_=Math.floor(Math.random()*tc);  
+                for(var element of snakeBody)
+                    if(element.x==ax_ && element.y==ay_){
+                        contains=true;
+                        break;
+                    }
+            }
+            while(contains);
+            ax=ax_;
+            ay=ay_;
+        }
+
+        ctx.fillStyle="red";
+        ctx.fillRect(ax*gs,ay*gs,gs-2,gs-2); 
+    }
+    else if(gameState==2){
+        ctx.fillStyle="red";
+        for(var i=0;i<snakeBody.length;i++){
+            ctx.fillRect(snakeBody[i].x*gs,snakeBody[i].y*gs,gs-2,gs-2);
+        }
+    }
+}
+    
+function keyDown(evt) {
+    switch(evt.keyCode) {
+        case 32: // space
+            if(gameState==0)
+                gameState=1;
+            else if(gameState==1){
+                gameState=0;
+            }
+            else if(gameState==2){
+                direction = 0.5;
+                gameState = 1; // paused:0, running:1, dead:2
+                px=py=10;
+                ax=ay=15;
+                xv=yv=0;
+                snakeBody=[];
+                tail=5; 
+            }
+            break;
+        case 37: // left
+            if(direction%2!=0 && gameState==1){
+                xv=-1;yv=0;
+                direction = 0;
+                game();
+            }
+            break;
+        case 38: // up
+            if(direction%2!=1 && gameState==1){
+                xv=0;yv=-1;
+                direction = 1;
+                game();
+            }
+            break;
+        case 39: // right
+            if(direction%2!=0 && gameState==1){
+                xv=1;yv=0;
+                direction = 2;
+                game();
+            }
+            break;
+        case 40: // down
+            if(direction%2!=1 && gameState==1){
+                xv=0;yv=1;
+                direction = 3;  
+                game();
+            }
+            break;
+    }
+}
+</script>
