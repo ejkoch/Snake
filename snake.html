@@ -1,150 +1,196 @@
-<canvas id="gc" width="400" height="400"></canvas>
+<canvas id="canv" width="400" height="400"></canvas>
 <script>
+
+var intervalID = null
+
 window.onload=function() {
-	canv=document.getElementById("gc");
+	canv=document.getElementById("canv");
 	ctx=canv.getContext("2d");
 	document.addEventListener("keydown",keyDown);
-	setInterval(game,1000/10);
+	intervalID=setInterval(game,1000/10);
     ctx.fillStyle="black";
     ctx.fillRect(0,0,canv.width,canv.height);
 }
-direction = 0.5;
-gameState = -1; // paused:0, running:1, dead:2
-px=py=10;
-tc=20;
-gs=400/tc;
-ax=ay=15;
-xv=yv=0;
+
+// game state enum
+const state={
+    init: -1,
+    paused: 0,
+    running: 1,
+    dead: 2 
+}
+
+// snake direction enum
+const dir={
+    none: -1,
+    left: 0,
+    up: 1,
+    right: 2,
+    down: 3
+}
+
+/* gameCounter and counterCapture are used to ensure the only
+   one button press is registered per game cycle */
+gameCounter=0; 
+counterCapture=null;
+speedMultiplier=1;
+/* it is necessary to know the snake direction to prevent
+   the snake from turning back into itself */
+direction=dir.none;
+gameState=state.init;
+posX=posY=10;
+tileCount=20;
+tileSize=400/tileCount;
+foodX=foodY=15;
+velX=velY=0;
 snakeBody=[];
 tail=5;
 
 function game() {
-    if(gameState==-1){
-        alert("Arrow Keys to move\nSpacebar to pause");
-        gameState = 1;
+    /* Initial game state displays info popup */
+    if(gameState==state.init){
+        alert("Arrow Keys to move\nSpacebar to pause\n+/- to increase/decrease speed");
+        gameState=state.running;
     }
-    if(gameState==0){
+    /* Paused game state has no change, only prints contents in grey-scale */
+    else if(gameState==state.paused){
         ctx.fillStyle="grey";
         ctx.fillRect(0,0,canv.width,canv.height);
         
         ctx.fillStyle="black";
         for(var i=0;i<snakeBody.length;i++){
-            ctx.fillRect(snakeBody[i].x*gs,snakeBody[i].y*gs,gs-2,gs-2);
+            ctx.fillRect(snakeBody[i].x*tileSize,snakeBody[i].y*tileSize,tileSize-2,tileSize-2);
         }
         
         ctx.fillStyle="white";
-        ctx.fillRect(ax*gs,ay*gs,gs-2,gs-2); 
-    }else if(gameState==1){
-       	px+=xv;
-        py+=yv;
+        ctx.fillRect(foodX*tileSize,foodY*tileSize,tileSize-2,tileSize-2); 
+    }
+    /* Running state progresses snake position and checks for death/eating */
+    else if(gameState==state.running){
+        // update x and y position of the snake head
+        posX+=velX;
+        posY+=velY;
 
         ctx.fillStyle="black";
         ctx.fillRect(0,0,canv.width,canv.height);
 
+        // printing snake body
         ctx.fillStyle="white";
         for(var i=0;i<snakeBody.length;i++){
-            ctx.fillRect(snakeBody[i].x*gs,snakeBody[i].y*gs,gs-2,gs-2);
-            if(snakeBody[i].x==px && snakeBody[i].y==py && snakeBody.length > 5){
-                gameState=2;
+            ctx.fillRect(snakeBody[i].x*tileSize,snakeBody[i].y*tileSize,tileSize-2,tileSize-2);
+            // checking if snake has run into its body
+            if(snakeBody[i].x==posX && snakeBody[i].y==posY && snakeBody.length > 5){
+                gameState=state.dead;
                 game();
             }
         }
         
-        if(px<0){
-            gameState=2;
-            game();
-        }
-        if(px>tc-1){
-            gameState=2;
-            game();
-        }
-        if(py<0){
-            gameState=2;
-            game();
-        }
-        if(py>tc-1){
-            gameState=2;
+        // checking if snake has run into the wall
+        if(posX<0 || posX>tileCount-1 || posY<0 || posY>tileCount-1 ){
+            gameState=state.dead;
             game();
         }
 
-        snakeBody.push({x:px,y:py});
+        // updating snake body array
+        snakeBody.push({x:posX,y:posY});
         while(snakeBody.length>tail){
             snakeBody.shift();
         }	
 
-        if(ax==px && ay==py){
+        // checking if snake head is on the food (eating)
+        if(foodX==posX && foodY==posY){
             tail++;
             do{
+                // ensuring the new food is not placed on the snake body
                 contains=false;
-                ax_=Math.floor(Math.random()*tc);
-                ay_=Math.floor(Math.random()*tc);  
+                foodX_=Math.floor(Math.random()*tileCount);
+                foodY_=Math.floor(Math.random()*tileCount);  
                 for(var element of snakeBody)
-                    if(element.x==ax_ && element.y==ay_){
+                    if(element.x==foodX_ && element.y==foodY_){
                         contains=true;
                         break;
                     }
             }
             while(contains);
-            ax=ax_;
-            ay=ay_;
+            foodX=foodX_;
+            foodY=foodY_;
         }
 
         ctx.fillStyle="red";
-        ctx.fillRect(ax*gs,ay*gs,gs-2,gs-2); 
+        ctx.fillRect(foodX*tileSize,foodY*tileSize,tileSize-2,tileSize-2); 
     }
-    else if(gameState==2){
+    /* Dead state freezes game and colors snake red */
+    else if(gameState==state.dead){
         ctx.fillStyle="red";
         for(var i=0;i<snakeBody.length;i++){
-            ctx.fillRect(snakeBody[i].x*gs,snakeBody[i].y*gs,gs-2,gs-2);
+            ctx.fillRect(snakeBody[i].x*tileSize,snakeBody[i].y*tileSize,tileSize-2,tileSize-2);
         }
     }
+
+    // incrementing the gameCounter every game cycle
+    gameCounter++;
 }
     
 function keyDown(evt) {
     switch(evt.keyCode) {
-        case 32: // space
-            if(gameState==0)
-                gameState=1;
-            else if(gameState==1){
-                gameState=0;
+        case 32: // space bar
+            if(gameState==state.paused)
+                // run the game if state is paused
+                gameState=state.running;
+            else if(gameState==state.running){
+                // pause the game if state is running
+                gameState=state.paused;
             }
-            else if(gameState==2){
-                direction = 0.5;
-                gameState = 1; // paused:0, running:1, dead:2
-                px=py=10;
-                ax=ay=15;
-                xv=yv=0;
+            else if(gameState==state.dead){
+                // restart the game if state is dead
+                direction=dir.none;
+                gameState=state.running;
+                posX=posY=10;
+                foodX=foodY=15;
+                velX=velY=0;
                 snakeBody=[];
                 tail=5; 
             }
             break;
-        case 37: // left
-            if(direction%2!=0 && gameState==1){
-                xv=-1;yv=0;
-                direction = 0;
-                game();
+        case 37: // left arrow key
+            if(gameCounter!=counterCapture && direction%2!=0 && gameState==state.running){
+                velX=-1;velY=0;
+                direction=dir.left;
+                counterCapture=gameCounter;
             }
             break;
-        case 38: // up
-            if(direction%2!=1 && gameState==1){
-                xv=0;yv=-1;
-                direction = 1;
-                game();
+        case 38: // up arrow key
+            if(gameCounter!=counterCapture && direction%2!=1 && gameState==state.running){
+                velX=0;velY=-1;
+                direction=dir.up;
+                counterCapture=gameCounter;
             }
             break;
-        case 39: // right
-            if(direction%2!=0 && gameState==1){
-                xv=1;yv=0;
-                direction = 2;
-                game();
+        case 39: // right arrow key
+            if(gameCounter!=counterCapture && direction%2!=0 && gameState==state.running){
+                velX=1;velY=0;
+                direction=dir.right;
+                counterCapture=gameCounter;
             }
             break;
-        case 40: // down
-            if(direction%2!=1 && gameState==1){
-                xv=0;yv=1;
-                direction = 3;  
-                game();
+        case 40: // down arrow key
+            if(gameCounter!=counterCapture && direction%2!=1 && gameState==state.running){
+                velX=0;velY=1;
+                direction=dir.down; 
+                counterCapture=gameCounter; 
             }
+            break;
+        case 107: // + key
+        case 187: // = key
+            clearInterval(intervalID)
+            speedMultiplier *= 1.5
+            intervalID=setInterval(game,1000/(speedMultiplier*10))
+            break;
+        case 109: // - key (minus)
+        case 189: // - key (hyphen)
+            clearInterval(intervalID)
+            speedMultiplier /= 1.5
+            intervalID=setInterval(game,1000/(speedMultiplier*10))
             break;
     }
 }
